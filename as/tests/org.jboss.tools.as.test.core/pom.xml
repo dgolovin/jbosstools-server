@@ -11,6 +11,7 @@
 	<packaging>eclipse-test-plugin</packaging>
 
 	<properties>
+		<asCoreTestSuite>org.jboss.tools.as.test.core.ASToolsTestSuite</asCoreTestSuite>
 		<jbosstools.test.jboss.home.3.2>${requirementsDirectory}/jboss-3.2.8.SP1</jbosstools.test.jboss.home.3.2>
 		<jbosstools.test.jboss.home.4.0>${requirementsDirectory}/jboss-4.0.5.GA</jbosstools.test.jboss.home.4.0>
 		<jbosstools.test.jboss.home.4.2>${requirementsDirectory}/jboss-4.2.3.GA</jbosstools.test.jboss.home.4.2> 
@@ -22,7 +23,7 @@
 		<jbosstools.test.jboss.home.eap.4.3>${requirementsDirectory}/jboss-eap-4.3/jboss-as</jbosstools.test.jboss.home.eap.4.3>
 		<jbosstools.test.jboss.home.eap.5.0>${requirementsDirectory}/jboss-eap-5.1/jboss-as</jbosstools.test.jboss.home.eap.5.0>
 		<jbosstools.test.jboss.home.eap.6.0>${requirementsDirectory}/jboss-eap-6.0</jbosstools.test.jboss.home.eap.6.0>
-                <jbosstools.test.jboss.home.eap.6.1>${requirementsDirectory}/jboss-eap-6.1</jbosstools.test.jboss.home.eap.6.1>
+		<jbosstools.test.jboss.home.eap.6.1>${requirementsDirectory}/jboss-eap-6.1</jbosstools.test.jboss.home.eap.6.1>
 
 
 		<systemProperties>-Djbosstools.test.jboss.home.3.2=${jbosstools.test.jboss.home.3.2} -Djbosstools.test.jboss.home.4.0=${jbosstools.test.jboss.home.4.0} -Djbosstools.test.jboss.home.4.2=${jbosstools.test.jboss.home.4.2} -Djbosstools.test.jboss.home.5.0=${jbosstools.test.jboss.home.5.0} -Djbosstools.test.jboss.home.5.1=${jbosstools.test.jboss.home.5.1} -Djbosstools.test.jboss.home.6.0=${jbosstools.test.jboss.home.6.0} -Djbosstools.test.jboss.home.7.0=${jbosstools.test.jboss.home.7.0} -Djbosstools.test.jboss.home.7.1=${jbosstools.test.jboss.home.7.1} -Djbosstools.test.jboss.home.eap.4.3=${jbosstools.test.jboss.home.eap.4.3} -Djbosstools.test.jboss.home.eap.5.0=${jbosstools.test.jboss.home.eap.5.0} -Djbosstools.test.jboss.home.eap.6.0=${jbosstools.test.jboss.home.eap.6.0}  -Djbosstools.test.jboss.home.eap.6.1=${jbosstools.test.jboss.home.eap.6.1} -Dorg.jboss.tools.tests.skipPrivateRequirements=${skipPrivateRequirements}  </systemProperties>
@@ -38,8 +39,10 @@
 				<artifactId>tycho-surefire-plugin</artifactId>
 				<version>${tychoVersion}</version>
 				<configuration>
+					<useUIHarness>false</useUIHarness>
+					<useUIThread>false</useUIThread>
 					<testSuite>org.jboss.tools.as.test.core</testSuite>
-					<testClass>org.jboss.tools.as.test.core.ASToolsTestSuite</testClass>
+					<testClass>${asCoreTestSuite}</testClass>
 				</configuration>
 			</plugin>
 			<plugin>
