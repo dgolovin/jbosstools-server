@@ -16,13 +16,12 @@ import java.util.HashMap;
 
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.Status;
 import org.jboss.ide.eclipse.archives.core.ArchivesCore;
-import org.jboss.ide.eclipse.archives.core.asf.DirectoryScanner;
+import org.jboss.ide.eclipse.archives.core.model.DirectoryScannerFactory.DirectoryScannerExtension.FileWrapper;
 import org.jboss.ide.eclipse.archives.core.util.PathUtils;
+import org.jboss.tools.archives.scanner.ITreeNode;
+import org.jboss.tools.archives.scanner.VirtualDirectoryScanner;
 
 /**
  * Utility methods to create scanners for matching
@@ -40,9 +39,10 @@ public class DirectoryScannerFactory {
 	};
 
 	public static DirectoryScannerExtension createDirectoryScanner(IArchiveStandardFileSet fs, boolean scan) {
-		String excludes = fs.getExcludesPattern();
+		String excludes = fs.getExcludesPattern(); 
 		if( fs.getRootArchive().isDestinationInWorkspace() ) {
-			excludes += "," + fs.getRootArchive().getRawDestinationPath(); //$NON-NLS-1$
+			String s1 = fs.getRootArchive().getRawDestinationPath();
+			excludes = (excludes == null || excludes.length() == 0 ? s1 : excludes + "," + s1);  //$NON-NLS-1$
 		}
 		return createDirectoryScanner(fs.getRawSourcePath(), fs.getRootArchiveRelativePath(),
 				fs.getIncludesPattern(), excludes, fs.getProjectName(),
@@ -101,9 +101,8 @@ public class DirectoryScannerFactory {
 	 * Exposes the isIncluded method so that entire scans do not need to occur
 	 * to find matches.
 	 *
-	 * Overwrites
 	 */
-	public static class DirectoryScannerExtension extends DirectoryScanner {
+	public static class DirectoryScannerExtension extends VirtualDirectoryScanner<FileWrapper> {
 		protected boolean workspaceRelative;
 		protected ScannableFileSet fs;
 		protected ArrayList<FileWrapper> matches;
@@ -130,12 +129,17 @@ public class DirectoryScannerFactory {
 			requiredFolders = new HashMap<String, ArrayList<FileWrapper>>();
 			setBasedir2(fs.rawPath);
 		}
-
+		
 	    public void scan(IProgressMonitor monitor) throws IllegalStateException {
 	    	this.monitor = monitor;
 	    	super.scan();
 	    }
-		
+	    
+	    @Override
+	    public void scan() throws IllegalStateException {
+	    	super.scan();
+	    }
+	    
 		public void setBasedir2(String path) {
 			String s = PathUtils.getAbsoluteLocation(path, fs.projectName, fs.inWorkspace, fs.version);
 			if( s == null )
@@ -149,12 +153,19 @@ public class DirectoryScannerFactory {
 			}
 		}
 
-		protected String getName(File file) {
+	    @Override
+		protected String getName(ITreeNode file) {
 	    	return workspaceRelative ? ((FileWrapper)file).getOutputName() : super.getName(file);
 	    }
 
+		 // Made protected to be over-ridden for workspace-style VFS
+	    @Override
+	    protected ITreeNode[] listFiles(ITreeNode file) {
+	    	return list2((FileWrapper)file);
+	    }	
+		
 	    /* Only used when workspace relative! */
-	    protected File[] list2(File file) {
+	    protected FileWrapper[] list2(File file) {
 	    	if( monitor != null && monitor.isCanceled() )
 	    		throw new RuntimeException();
 	    	
@@ -164,30 +175,31 @@ public class DirectoryScannerFactory {
 	    		return list2absolute(file);
 	    }
 
-	    protected File getChild(File file, String element) {
+	    @Override
+	    protected ITreeNode getChild(FileWrapper file, String element) {
 	    	if( monitor != null && monitor.isCanceled() )
 	    		throw new RuntimeException();
-
+	    	File f2 = (File)file;
 	    	if( !fs.inWorkspace)
-	    		return new FileWrapper(file, new Path(file.getAbsolutePath()), fs.rootArchiveRelativePath);
+	    		return new FileWrapper(f2, new Path(f2.getAbsolutePath()), fs.rootArchiveRelativePath);
 	    	FileWrapper pWrapper = (FileWrapper)file;
-	    	File child = super.getChild(file, element);
+	    	File child = new File(f2, element);
 	    	FileWrapper childWrapper = new FileWrapper(child, pWrapper.getWrapperPath().append(element), fs.rootArchiveRelativePath);
 	    	return childWrapper;
 	    }
 	    
-	    protected File[] list2workspace(File file) {
+	    protected FileWrapper[] list2workspace(File file) {
 	    	if( monitor != null && monitor.isCanceled() )
 	    		throw new RuntimeException();
 
 	    	IPath workspaceRelative = ((FileWrapper)file).getWrapperPath();
 	    	if( workspaceRelative == null )
-	    		return new File[0];
+	    		return new FileWrapper[0];
 
 	    	IPath[] childrenWorkspace = ArchivesCore.getInstance()
 	    			.getVFS().getWorkspaceChildren(workspaceRelative);
 	    	IPath[] childrenAbsolute = globalize(childrenWorkspace);
-	    	File[] files = new File[childrenAbsolute.length];
+	    	FileWrapper[] files = new FileWrapper[childrenAbsolute.length];
 	    	IPath parentRootFSRelative = ((FileWrapper)file).getRootArchiveRelative();
 	    	for( int i = 0; i < files.length; i++ ) {
 	    		files[i] = new FileWrapper(childrenAbsolute[i].toFile(), childrenWorkspace[i], 
@@ -204,7 +216,7 @@ public class DirectoryScannerFactory {
 			return results;
 	    }
 
-	    protected File[] list2absolute(File file) {
+	    protected FileWrapper[] list2absolute(File file) {
 	    	if( monitor != null && monitor.isCanceled() )
 	    		throw new RuntimeException();
 
@@ -218,12 +230,12 @@ public class DirectoryScannerFactory {
 	    	return new FileWrapper[]{};
 	    }
 
-	    protected void postInclude(File f, String relative) {
+	    protected void postInclude(FileWrapper f, String relative) {
 	    	super.postInclude(f, relative);
 	    	if( f instanceof FileWrapper ) {
 	    		FileWrapper f2 = ((FileWrapper)f);
 	    		f2.setFilesetRelative(relative);
-		    	if( f.isFile() ) {
+		    	if( f2.isFile() ) {
 		    		matches.add(f2);
 		    		addMatchToMap(f2, matchesMap);
 		    		if( fs.inWorkspace ) 
@@ -255,8 +267,8 @@ public class DirectoryScannerFactory {
 	    	}
 	    }
 	    
-	    protected boolean isSelected(String name, File file) {
-	    	return file != null && super.isSelected(name, file) && file.isFile();
+	    protected boolean isSelected(String name, ITreeNode file) {
+	    	return file != null && super.isSelected(name, file) && ((ITreeNode)file).isLeaf();
 	    }
 
 
@@ -277,9 +289,10 @@ public class DirectoryScannerFactory {
 	    }
 
 	    /**
+	     * This class should really be broken out 
 		 * @since 3.4
 		 */
-	    public static class FileWrapper extends File {
+	    public static class FileWrapper extends File implements ITreeNode {
 	    	// The actual source file
 	    	File f;
 
@@ -350,6 +363,17 @@ public class DirectoryScannerFactory {
 						path.removeLastSegments(1), rootArchiveRelativePath.removeLastSegments(1));
 				ret.setFilesetRelative(p.removeLastSegments(1).toString());
 				return ret;
+			}
+			public boolean isLeaf() {
+				return !isDirectory();
+			}
+			public ITreeNode getChild(String name) {
+				// Should never be called. Overridden by the scanner 
+				return null;
+			}
+			public ITreeNode[] listChildren() {
+				// Should never be called. Overridden by the scanner 
+				return null;
 			}
 	    }
 
