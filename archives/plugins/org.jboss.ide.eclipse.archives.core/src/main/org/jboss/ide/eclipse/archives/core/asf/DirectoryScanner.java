@@ -46,8 +46,6 @@ import org.apache.tools.ant.types.resources.FileResource;
 import org.apache.tools.ant.types.selectors.FileSelector;
 import org.apache.tools.ant.types.selectors.SelectorUtils;
 import org.apache.tools.ant.util.FileUtils;
-import org.jboss.tools.archives.scanner.DirectoryScannerIterator;
-import org.jboss.tools.archives.scanner.IterableDirectoryScanner;
 
 /**
  * Class for scanning a directory for files/directories which match certain
@@ -147,7 +145,7 @@ import org.jboss.tools.archives.scanner.IterableDirectoryScanner;
  * 
  */
 @Deprecated
-public class DirectoryScanner implements IterableDirectoryScanner<File> {
+public class DirectoryScanner {
 
     /** Is OpenVMS the operating system we're running on? */
     private static final boolean ON_VMS = Os.isFamily("openvms");//$NON-NLS-1$
@@ -367,7 +365,7 @@ public class DirectoryScanner implements IterableDirectoryScanner<File> {
      */
     private IllegalStateException illegal = null;
     
-    private DirectoryScannerIterator<File> iterator = null;
+    private DirectoryScannerIterator iterator = null;
     
     /**
      * Sole constructor.
@@ -766,7 +764,7 @@ public class DirectoryScanner implements IterableDirectoryScanner<File> {
     	if( iterator == null )
     		scandirImpl(dir,vpath);
     	else
-    		iterator.addElementToScanList(dir, vpath);
+    		iterator.addFileToScanList(dir, vpath);
     }
     
     /**
@@ -1329,17 +1327,66 @@ public class DirectoryScanner implements IterableDirectoryScanner<File> {
     }
     
     public Iterator<File> iterator() {
-    	iterator = new DirectoryScannerIterator(this);
-        scanPrepare();
-        runScan();
+    	iterator = new DirectoryScannerIterator();
     	return iterator;
     }
+    
+    public class DirectoryScannerIterator implements Iterator<File> {
+    	protected ArrayList<DSPair> matches;
+    	protected ArrayList<DSPair> toScan;
+    	protected DirectoryScanner scanner;
+    	protected int pointer;
+    	public DirectoryScannerIterator() {
+    		this.matches = new ArrayList<DSPair>();
+    		this.toScan = new ArrayList<DSPair>();
+    		pointer = 0;
+    		iterator = this;
+            scanPrepare();
+            runScan();
+    	}
+    	
+    	protected void addFileToScanList(File file, String vpath) {
+    		toScan.add(0, new DSPair(file, vpath));
+    	}
+    	
+    	protected void addMatch(File file, String vpath) {
+    		matches.add(pointer, new DSPair(file, vpath));
+    	}
+    	
+		public boolean hasNext() {
+			if( pointer <= matches.size() -1 ) return true;
+			if( toScan.isEmpty()) return false;
+			
+			while( !toScan.isEmpty() && pointer == matches.size()) {
+				DSPair pair = toScan.remove(0);
+				scandirImpl(pair.file, pair.vpath);
+			}
+			
+			boolean hasNext =  pointer <= matches.size() -1 ||
+				(pointer == matches.size() && !toScan.isEmpty());
+			if( !hasNext )
+				release();
+			return hasNext;
+		}
 
-	public void scanDirectory(File file, String vpath) {
-		scandirImpl(file, vpath);
-	}
+		public File next() {
+			if( pointer <= (matches.size()-1))
+				return matches.get(pointer++).file;
+			return null;
+		}
 
-	public void cleanup() {
-		release();
-	}
+		public void remove() {
+			throw new UnsupportedOperationException();
+		}
+    	
+    }
+    
+    protected class DSPair {
+    	private File file;
+    	private String vpath;
+    	public DSPair(File file, String vpath) {
+    		this.file = file;
+    		this.vpath = vpath;
+    	}
+    }
 }
