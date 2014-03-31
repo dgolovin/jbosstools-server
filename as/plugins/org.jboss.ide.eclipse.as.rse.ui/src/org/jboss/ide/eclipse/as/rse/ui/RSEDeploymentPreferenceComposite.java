@@ -1,7 +1,19 @@
+/******************************************************************************* 
+ * Copyright (c) 2014 Red Hat, Inc. 
+ * Distributed under license by Red Hat, Inc. All rights reserved. 
+ * This program is made available under the terms of the 
+ * Eclipse Public License v1.0 which accompanies this distribution, 
+ * and is available at http://www.eclipse.org/legal/epl-v10.html 
+ * 
+ * Contributors: 
+ * Red Hat, Inc. - initial API and implementation 
+ ******************************************************************************/ 
 package org.jboss.ide.eclipse.as.rse.ui;
 
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.util.Arrays;
+import java.util.List;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -318,9 +330,19 @@ public abstract class RSEDeploymentPreferenceComposite extends Composite impleme
 				return;
 			Display.getDefault().asyncExec(new Runnable(){
 				public void run() {
+					List<String> before = (List<String>)Arrays.asList(combo.getItems());
 					combo.removeModifyListener(comboMListener);
 					refreshConnections();
 					combo.addModifyListener(comboMListener);
+					String[] after = combo.getItems();
+					// Find whichever is new, and select that. 
+					for( int i = 0; i < after.length; i++ ) {
+						if( !before.contains(after[i])) {
+							combo.select(i);
+							return;
+						}
+					}
+					
 				}
 			});
 		}

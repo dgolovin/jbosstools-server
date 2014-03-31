@@ -13,6 +13,8 @@ package org.jboss.ide.eclipse.as.ui.wizards;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
@@ -50,6 +52,8 @@ import org.jboss.ide.eclipse.as.wtp.core.server.behavior.IServerProfileInitializ
 import org.jboss.ide.eclipse.as.wtp.core.server.behavior.ServerProfileModel;
 import org.jboss.ide.eclipse.as.wtp.core.server.behavior.ServerProfileModel.ServerProfile;
 import org.jboss.ide.eclipse.as.wtp.ui.profile.ProfileUI;
+import org.jboss.tools.usage.event.UsageEventType;
+import org.jboss.tools.usage.event.UsageReporter;
 
 /**
  * 
@@ -85,9 +89,26 @@ public class ServerProfileWizardFragment extends WizardFragment implements IComp
 	public ServerProfileWizardFragment() {
 		super();
 	}
+	
+	@Override
 	public void setComplete(boolean complete) {
 		super.setComplete(complete);
 	}
+
+	@Override
+	public boolean isComplete() {
+		return !hasDisposedWidgets() && super.isComplete();
+	}
+	
+	/*
+	 * Wizard fragments are re-used. This means the only way we can check if this is being used in a new wizard, or 
+	 * in a previous wizard, is to check whether any widgets are now disposed.  We'll check the most common widget, 
+	 * the description label. 
+	 */
+	protected boolean hasDisposedWidgets() {
+		return serverExplanationLabel.isDisposed();
+	}
+	
 	public Composite createComposite(Composite parent, IWizardHandle handle) {
 		this.handle = handle;
 		
@@ -120,7 +141,17 @@ public class ServerProfileWizardFragment extends WizardFragment implements IComp
 		} catch(CoreException ce) {
 			JBossServerUIPlugin.log(ce.getStatus());
 		}
-		profiles = ServerProfileModel.getDefault().getProfiles(serverType);
+		ServerProfile[] tmpProfiles = ServerProfileModel.getDefault().getProfiles(serverType);
+		// sort by visible name
+		ArrayList<ServerProfile> tmpProfileList = new ArrayList<ServerProfile>(Arrays.asList(tmpProfiles));
+		Collections.sort(tmpProfileList, new Comparator<ServerProfile>(){
+			public int compare(ServerProfile arg0, ServerProfile arg1) {
+				String n1 = arg0.getVisibleName() == null ? arg0.getId() : arg0.getVisibleName();
+				String n2 = arg1.getVisibleName() == null ? arg1.getId() : arg1.getVisibleName();
+				return n1.compareTo(n2);
+			}
+		});
+		profiles =  tmpProfileList.toArray(new ServerProfile[tmpProfileList.size()]);
 
 		if( runtimeType != null ) {
 			ArrayList<IRuntime> validRuntimes = new ArrayList<IRuntime>();
@@ -358,13 +389,29 @@ public class ServerProfileWizardFragment extends WizardFragment implements IComp
 	public void exit() {
 	}
 
+	@Override
 	public void performFinish(IProgressMonitor monitor) throws CoreException {
+		super.performFinish(monitor);
+		trackNewServerEvent(1);
 	}
 
-	public boolean isComplete() {
-		return super.isComplete();
+	private void trackNewServerEvent(int succesful) {
+		IServerAttributes server = (IServerAttributes)getTaskModel().getObject(TaskModel.TASK_SERVER);
+		String serverType = "UNKNOWN";
+		if(server.getServerType()!=null) {
+			serverType = server.getServerType().getId();
+		}
+		UsageEventType eventType = JBossServerUIPlugin.getDefault().getNewServerEventType();
+		UsageReporter.getInstance().trackEvent(eventType.event(serverType, succesful));
+		
 	}
 
+	@Override
+	public void performCancel(IProgressMonitor monitor) throws CoreException {
+		super.performCancel(monitor);
+		trackNewServerEvent(0);
+	}
+	
 	public boolean hasComposite() {
 		return true;
 	}
@@ -443,7 +490,7 @@ public class ServerProfileWizardFragment extends WizardFragment implements IComp
 				initializers[i].initialize(wc);
 			}
 			server = wc.save(false, null);
-			getTaskModel().putObject(TaskModel.TASK_SERVER, server);
+			getTaskModel().putObject(TaskModel.TASK_SERVER, server.createWorkingCopy());
 		}
 	};
 	
@@ -477,7 +524,7 @@ public class ServerProfileWizardFragment extends WizardFragment implements IComp
 					wc = ((IServerWorkingCopy)server);
 				}
 				wc.setRuntime(runtime);
-				getTaskModel().putObject(TaskModel.TASK_SERVER, wc.save(false, monitor));
+				getTaskModel().putObject(TaskModel.TASK_SERVER, wc.save(false, monitor).createWorkingCopy());
 			}
 		}
 	};
