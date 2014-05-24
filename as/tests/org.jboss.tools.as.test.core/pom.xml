@@ -41,6 +41,8 @@
 				<configuration>
 					<testSuite>org.jboss.tools.as.test.core</testSuite>
 					<testClass>org.jboss.tools.as.test.core.ASToolsTestSuite</testClass>
+					<useUIHarness>true</useUIHarness>
+					<useUIThread>false</useUIThread>
 				</configuration>
 			</plugin>
 			<plugin>

@@ -27,7 +27,6 @@ import org.junit.runners.Suite.SuiteClasses;
 	RuntimeJarUtilityTest.class, 
 	CreateRuntimeTwiceTest.class,
 	XPathModelTest.class,
-	MockArgsTests.class, 
 	DeploymentScannerAdditionsTest.class,
 	PublishingSuite.class,
 	ServerBeanRuntimeMatcherTest.class,

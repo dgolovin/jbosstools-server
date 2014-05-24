@@ -16,23 +16,8 @@ import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
 @SuiteClasses({
-	AllSubsystemResolutionTest.class,
-	BrowseBehaviorSubsystemResolutionTest.class,
-	ExploreBehaviorSubsystemResolutionTest.class,
+
 	PublishSubsystemResolutionTest.class,
-	TabGroupSubsystemResolutionTest.class,
-	XPathPortDiscoveryResolutionTest.class,
-	ServerSubsystemTest1.class,
-	ModulePathFilterUtilityTest.class,
-	ModuleRestartBehaviorControllerTest.class,
-	DeploymentSettingsControllerTest.class,
-	LocalFilesystemSubsystemTest.class,
-	ModuleDeployPathControllerTest.class,
-	RSEFilesystemSubsystemTest.class,
-	PublishRunnerTest.class,
-	ZippedPublishRunnerTest.class,
-	StandardFilesystemPublishControllerTest.class,
-	ServerProfileTest.class,
 })
 public class SubsystemSuite {
 }
