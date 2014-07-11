@@ -29,6 +29,8 @@ import org.jboss.ide.eclipse.as.core.util.IJBossRuntimeConstants;
 import org.jboss.ide.eclipse.as.core.util.IJBossRuntimeResourceConstants;
 import org.jboss.ide.eclipse.as.core.util.LaunchCommandPreferences;
 import org.jboss.ide.eclipse.as.core.util.LaunchConfigUtils;
+import org.jboss.ide.eclipse.as.core.util.ServerAttributeHelper;
+import org.jboss.tools.as.core.server.controllable.subsystems.internal.XPathsPortsController;
 
 public class LocalJBoss7StartConfigurator extends AbstractStartLaunchConfigurator {
 
@@ -55,6 +57,7 @@ public class LocalJBoss7StartConfigurator extends AbstractStartLaunchConfigurato
 		IJBossServerRuntime jbossRuntime = getJBossRuntime();
 		getProperties().setHost(getHost(jbossServer, jbossRuntime), launchConfig);
 		getProperties().setServerHome(getServerHome(jbossRuntime), jbossRuntime, launchConfig);
+		getProperties().setHttpPort(getHttpPort(jbossServer.getServer()), launchConfig);
 		getProperties().setServerFlag(getSupportsServerFlag(jbossRuntime), jbossRuntime, launchConfig);
 		getProperties().setJreContainer(getJreContainerPath(jbossRuntime), launchConfig);
 		getProperties().setEndorsedDir(getEndorsedDir(jbossRuntime), launchConfig);
@@ -187,6 +190,16 @@ public class LocalJBoss7StartConfigurator extends AbstractStartLaunchConfigurato
 			return null;
 		}
 	}
+	
+	protected int getHttpPort(IServer server) {
+		return ServerAttributeHelper.createHelper(server).getAttribute(XPathsPortsController.WEB_PORT, XPathsPortsController.JBOSS_WEB_DEFAULT_PORT);
+	}
+	
+	protected int getHttpManagementPort(IServer server) {
+		return ServerAttributeHelper.createHelper(server).getAttribute(XPathsPortsController.AS7_MANAGEMENT_PORT, XPathsPortsController.WILDFLY8_MANAGEMENT_PORT_DEFAULT_PORT);
+	}
 
-
+	protected int getPortOffset(IServer server) {
+		return ServerAttributeHelper.createHelper(server).getAttribute(XPathsPortsController.PORT_OFFSET_KEY, XPathsPortsController.PORT_OFFSET_DEFAULT_PORT);
+	}
 }

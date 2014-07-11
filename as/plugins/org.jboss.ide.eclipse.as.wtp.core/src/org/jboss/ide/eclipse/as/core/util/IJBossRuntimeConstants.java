@@ -97,4 +97,7 @@ public interface IJBossRuntimeConstants {
 	public static final String START = "start"; //$NON-NLS-1$
 	public static final String addURL = "addURL"; //$NON-NLS-1$
 	
+	public static final String JB8_SOCKET_PORT_OFFCET_ARG = "jboss.socket.binding.port-offset";
+	public static final String JB8_MANAGEMENT_HTTP_PORT_ARG = "jboss.management.http.port";
+	public static final String JB8_HTTP_PORT_ARG = "jboss.http.port";
 }
